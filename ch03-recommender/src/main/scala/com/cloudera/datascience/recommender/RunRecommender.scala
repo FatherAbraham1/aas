@@ -19,11 +19,40 @@ import org.apache.spark.rdd.RDD
 object RunRecommender {
 
   def main(args: Array[String]): Unit = {
-    val sc = new SparkContext(new SparkConf().setAppName("Recommender"))
-    val base = "hdfs:///user/ds/"
-    val rawUserArtistData = sc.textFile(base + "user_artist_data.txt")
-    val rawArtistData = sc.textFile(base + "artist_data.txt")
-    val rawArtistAlias = sc.textFile(base + "artist_alias.txt")
+    val master = args.length match {
+      case x: Int if x > 0 => args(0)
+      case _ => "local"
+    }
+
+    val sc = new SparkContext(new SparkConf().setAppName("Recommender").setMaster("local"))
+    val input = args.length match {
+        //"hdfs:///user/ds/"
+      case x: Int if x > 1 => sc.textFile(args(1))
+      case _ => ""
+    }
+    val base = input
+    val rawUserArtistData = args.length match {
+      //"hdfs:///user/ds/"
+      case x: Int if x > 1 => sc.textFile(base + "user_artist_data.txt")
+      case _ => sc.parallelize(List("1000002 1 55",
+        "1000002 1000006 33"))
+    }
+      //sc.textFile(base + "user_artist_data.txt")
+    val rawArtistData = args.length match {
+        //"hdfs:///user/ds/"
+        case x: Int if x > 1 => sc.textFile(base + "user_artist_data.txt")
+        case _ => sc.parallelize(List("1134999\t06Crazy Life",
+          "6821360\tPang Nakarin"))
+      }
+
+        //sc.textFile(base + "artist_data.txt")
+    val rawArtistAlias = args.length match {
+          //"hdfs:///user/ds/"
+          case x: Int if x > 1 => sc.textFile(base + "user_artist_data.txt")
+          case _ => sc.parallelize(List("1092764\t1000311",
+            "1095122\t1000557"))
+        }
+        //sc.textFile(base + "artist_alias.txt")
 
     preparation(rawUserArtistData, rawArtistData, rawArtistAlias)
     model(sc, rawUserArtistData, rawArtistData, rawArtistAlias)

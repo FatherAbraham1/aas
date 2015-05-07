@@ -26,12 +26,14 @@ object RunIntro extends Serializable {
 
     val sc = new SparkContext(new SparkConf().setAppName("Intro").setMaster("local"))
     val input = args.length match {
-      case x: Int if x > 1 => sc.textFile(args(1))
-      case _ => sc.parallelize(List("37291,53113,0.833333333333333,?,1,?,1,1,1,1,0,TRUE",
-        "39086,47614,1,?,1,?,1,1,1,1,1,TRUE"))
-    }
-    val rawblocks = sc.parallelize(Seq("id_1"))
       //sc.textFile("hdfs:///user/ds/linkage")
+      case x: Int if x > 1 => sc.textFile(args(1))
+      case _ => sc.textFile("./files/3/block_1_1000.csv")
+        //sc.parallelize(List("37291,53113,0.833333333333333,?,1,?,1,1,1,1,0,TRUE",
+       // "39086,47614,1,?,1,?,1,1,1,1,1,TRUE"))
+    }
+    val rawblocks = input
+      //sc.parallelize(Seq("id_1"))
     def isHeader(line: String) = line.contains("id_1")
     
     val noheader = rawblocks.filter(x => !isHeader(x))
@@ -68,12 +70,16 @@ object RunIntro extends Serializable {
     })
     reduced.foreach(println)
 
-    val statsm = statsWithMissing(parsed.filter(_.matched).map(_.scores))
-    val statsn = statsWithMissing(parsed.filter(!_.matched).map(_.scores))
-    statsm.zip(statsn).map { case(m, n) =>
-      (m.missing + n.missing, m.stats.mean - n.stats.mean)
-    }.foreach(println)
-
+    val statsmRDD:RDD[Array[Double]] = parsed.filter(_.matched).map(_.scores)
+    val statsnRDD:RDD[Array[Double]] = parsed.filter(!_.matched).map(_.scores)
+    // avoid after filter. rdd become empty, so we should use sample data not head data
+    if(!statsmRDD.isEmpty() && !statsnRDD.isEmpty()) {
+      val statsm = statsWithMissing(parsed.filter(_.matched).map(_.scores))
+      val statsn = statsWithMissing(parsed.filter(!_.matched).map(_.scores))
+      statsm.zip(statsn).map { case (m, n) =>
+        (m.missing + n.missing, m.stats.mean - n.stats.mean)
+      }.foreach(println)
+    }
     def naz(d: Double) = if (Double.NaN.equals(d)) 0.0 else d
     val ct = parsed.map(md => {
       val score = Array(2, 5, 6, 7, 8).map(i => naz(md.scores(i))).sum
@@ -87,13 +93,28 @@ object RunIntro extends Serializable {
   }
 
   def statsWithMissing(rdd: RDD[Array[Double]]): Array[NAStatCounter] = {
+    // check null avoid exception
+//    val acc = rdd.sparkContext.accumulator(0)
+//    val nullParNUM = rdd.mapPartitions(iter => {
+//      if(iter.isEmpty) {
+//        acc += 1
+//      }
+//      iter
+//    }).count()
+//    val sumPar = rdd.partitions.size
+    //val n = sumPar - nullParNUM
+    // check null  rdd.coalesce(1).
     val nastats = rdd.mapPartitions((iter: Iterator[Array[Double]]) => {
-      val nas: Array[NAStatCounter] = iter.next().map(d => NAStatCounter(d))
-      iter.foreach(arr => {
-        nas.zip(arr).foreach { case (n, d) => n.add(d) }
-      })
-      Iterator(nas)
+        if(iter.isEmpty){
+          println()
+        }
+        val nas: Array[NAStatCounter] = iter.next().map(d => NAStatCounter(d))
+        iter.foreach(arr => {
+          nas.zip(arr).foreach { case (n, d) => n.add(d) }
+        })
+        Iterator(nas)
     })
+    // a void n must be positive
     nastats.reduce((n1, n2) => {
       n1.zip(n2).map { case (a, b) => a.merge(b) }
     })
