@@ -19,9 +19,19 @@ case class Scored(md: MatchData, score: Double)
 
 object RunIntro extends Serializable {
   def main(args: Array[String]): Unit = {
-    val sc = new SparkContext(new SparkConf().setAppName("Intro"))
-   
-    val rawblocks = sc.textFile("hdfs:///user/ds/linkage")
+    val master = args.length match {
+      case x: Int if x > 0 => args(0)
+      case _ => "local"
+    }
+
+    val sc = new SparkContext(new SparkConf().setAppName("Intro").setMaster("local"))
+    val input = args.length match {
+      case x: Int if x > 1 => sc.textFile(args(1))
+      case _ => sc.parallelize(List("37291,53113,0.833333333333333,?,1,?,1,1,1,1,0,TRUE",
+        "39086,47614,1,?,1,?,1,1,1,1,1,TRUE"))
+    }
+    val rawblocks = sc.parallelize(Seq("id_1"))
+      //sc.textFile("hdfs:///user/ds/linkage")
     def isHeader(line: String) = line.contains("id_1")
     
     val noheader = rawblocks.filter(x => !isHeader(x))
