@@ -15,8 +15,20 @@ import org.apache.spark.SparkContext._
 object RunKMeans {
 
   def main(args: Array[String]): Unit = {
-    val sc = new SparkContext(new SparkConf().setAppName("K-means"))
-    val rawData = sc.textFile("hdfs:///user/ds/kddcup.data")
+    val master = args.length match {
+      case x: Int if x > 0 => args(0)
+      case _ => "local"
+    }
+
+    val sc = new SparkContext(new SparkConf().setAppName("K-means").setMaster(master))
+    val input = args.length match {
+      //"hdfs:///user/ds/covtype.data"
+      case x: Int if x > 1 => sc.textFile(args(1))
+      case _ => sc.textFile("./files/5/kddcup.data_10_percent_1000")
+    }
+    //sc.textFile("hdfs:///user/ds/kddcup.data")
+    val rawData = input
+
     clusteringTake0(rawData)
     clusteringTake1(rawData)
     clusteringTake2(rawData)

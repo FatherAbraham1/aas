@@ -22,15 +22,24 @@ import scala.collection.mutable.ArrayBuffer
 
 object RunLSA {
   def main(args: Array[String]) {
-    val k = if (args.length > 0) args(0).toInt else 100
-    val numTerms = if (args.length > 1) args(1).toInt else 50000
-    val sampleSize = if (args.length > 2) args(2).toDouble else 0.1
+    val master = args.length match {
+      case x: Int if x > 0 => args(0)
+      case _ => "local"
+    }
+    val k = if (args.length > 1) args(1).toInt else 100
+    val numTerms = if (args.length > 2) args(2).toInt else 50000
+    val sampleSize = if (args.length > 3) args(3).toDouble else 0.1
 
-    val conf = new SparkConf().setAppName("Wiki LSA")
+    val conf = new SparkConf().setAppName("Wiki LSA").setMaster(master)
     conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     val sc = new SparkContext(conf)
 
-    val (termDocMatrix, termIds, docIds, idfs) = preprocessing(sampleSize, numTerms, sc)
+    val inputPath = args.length match {
+      //"hdfs:///user/ds/covtype.data"
+      case x: Int if x > 4 => args(4)
+      case _ =>"./files/6/enwiki_2000.xml"
+    }
+    val (termDocMatrix, termIds, docIds, idfs) = preprocessing(sampleSize, numTerms, sc, inputPath)
     termDocMatrix.cache()
     val mat = new RowMatrix(termDocMatrix)
     val svd = mat.computeSVD(k, computeU=true)
@@ -49,14 +58,15 @@ object RunLSA {
    * Returns an RDD of rows of the term document matrix, a mapping of column indices to terms, and a
    * mapping of row IDs to document titles.
    */
-  def preprocessing(sampleSize: Double, numTerms: Int, sc: SparkContext)
+  def preprocessing(sampleSize: Double, numTerms: Int, sc: SparkContext, path: String)
       : (RDD[Vector], Map[Int, String], Map[Long, String], Map[String, Double]) = {
-    val pages = readFile("hdfs:///user/ds/Wikipedia/", sc)
+    //"hdfs:///user/ds/Wikipedia/"
+    val pages = readFile(path, sc)
       .sample(false, sampleSize, 11L)
 
     val plainText = pages.filter(_ != null).flatMap(wikiXmlToPlainText)
 
-    val stopWords = sc.broadcast(loadStopWords("stopwords.txt")).value
+    val stopWords = sc.broadcast(loadStopWords("./files/6/stopwords.txt")).value
 
     val lemmatized = plainText.mapPartitions(iter => {
       val pipeline = createNLPPipeline()

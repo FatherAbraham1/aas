@@ -35,8 +35,18 @@ object RunGeoTime extends Serializable {
   val formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
 
   def main(args: Array[String]): Unit = {
-    val sc = new SparkContext(new SparkConf().setAppName("GeoTime"))
-    val taxiRaw = sc.textFile("taxidata")
+    val master = args.length match {
+      case x: Int if x > 0 => args(0)
+      case _ => "local"
+    }
+    val sc = new SparkContext(new SparkConf().setAppName("GeoTime").setMaster(master))
+    val inputPath = args.length match {
+      //"hdfs:///user/ds/covtype.data"
+      case x: Int if x > 1 => args(1)
+      case _ =>"./files/8/trip_data_1_1000.csv"
+    }
+    //"taxidata"
+    val taxiRaw = sc.textFile(inputPath)
 
     val safeParse = safe(parse)
     val taxiParsed = taxiRaw.map(safeParse)
@@ -45,7 +55,7 @@ object RunGeoTime extends Serializable {
     val taxiBad = taxiParsed.collect({
       case t if t.isRight => t.right.get
     })
-    taxiBad.collect().foreach(println)
+   // taxiBad.collect().foreach(println)
 
     val taxiGood = taxiParsed.collect({
       case t if t.isLeft => t.left.get

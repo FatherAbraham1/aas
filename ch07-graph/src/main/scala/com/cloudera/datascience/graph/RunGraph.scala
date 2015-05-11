@@ -24,9 +24,18 @@ import scala.xml._
 object RunGraph extends Serializable {
 
   def main(args: Array[String]): Unit = {
-    val sc = new SparkContext(new SparkConf().setAppName("Graph"))
-
-    val medlineRaw = loadMedline(sc, "hdfs:///user/ds/medline")
+    val master = args.length match {
+      case x: Int if x > 0 => args(0)
+      case _ => "local"
+    }
+    val sc = new SparkContext(new SparkConf().setAppName("Graph").setMaster(master))
+    val inputPath = args.length match {
+      //"hdfs:///user/ds/covtype.data"
+      case x: Int if x > 1 => args(1)
+      case _ =>"./files/7/medline15n0033_2000.xml"
+    }
+    // "hdfs:///user/ds/medline"
+    val medlineRaw = loadMedline(sc, inputPath)
     val mxml: RDD[Elem] = medlineRaw.map(XML.loadString)
     val medline: RDD[Seq[String]] = mxml.map(majorTopics).cache()
 
