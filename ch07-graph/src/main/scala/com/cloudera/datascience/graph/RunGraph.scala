@@ -32,7 +32,7 @@ object RunGraph extends Serializable {
     val inputPath = args.length match {
       //"hdfs:///user/ds/covtype.data"
       case x: Int if x > 1 => args(1)
-      case _ =>"./files/7/medline15n0033_2000.xml"
+      case _ =>"./files/7/medline15n0033.xml"
     }
     // "hdfs:///user/ds/medline"
     val medlineRaw = loadMedline(sc, inputPath)
