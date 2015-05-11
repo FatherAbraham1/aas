@@ -28,7 +28,7 @@ object RunIntro extends Serializable {
     val input = args.length match {
       //sc.textFile("hdfs:///user/ds/linkage")
       case x: Int if x > 1 => sc.textFile(args(1))
-      case _ => sc.textFile("./files/3/block_1_1000.csv")
+      case _ => sc.textFile("./files/2/block_1_1000.csv")
         //sc.parallelize(List("37291,53113,0.833333333333333,?,1,?,1,1,1,1,0,TRUE",
        // "39086,47614,1,?,1,?,1,1,1,1,1,TRUE"))
     }

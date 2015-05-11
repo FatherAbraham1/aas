@@ -17,8 +17,19 @@ import org.apache.spark.{SparkConf, SparkContext}
 object RunRDF {
 
   def main(args: Array[String]): Unit = {
-    val sc = new SparkContext(new SparkConf().setAppName("RDF"))
-    val rawData = sc.textFile("hdfs:///user/ds/covtype.data")
+    val master = args.length match {
+      case x: Int if x > 0 => args(0)
+      case _ => "local"
+    }
+
+    val sc = new SparkContext(new SparkConf().setAppName("RDF").setMaster(master))
+    val input = args.length match {
+      //"hdfs:///user/ds/covtype.data"
+      case x: Int if x > 1 => sc.textFile(args(1))
+      case _ => sc.textFile("./files/4/covtype_2000.data")
+    }
+
+    val rawData = input
 
     val data = rawData.map { line =>
       val values = line.split(',').map(_.toDouble)
@@ -52,10 +63,14 @@ object RunRDF {
 
     println(metrics.confusionMatrix)
     println(metrics.precision)
-
-    (0 until 7).map(
-      category => (metrics.precision(category), metrics.recall(category))
-    ).foreach(println)
+    //old
+//    (0 until 7).map(
+//      category => (metrics.precision(category), metrics.recall(category))
+//    ).foreach(println)
+    // new
+     metrics.labels.map(
+          category => (metrics.precision(category), metrics.recall(category))
+        ).foreach(println)
   }
 
   def getMetrics(model: DecisionTreeModel, data: RDD[LabeledPoint]): MulticlassMetrics = {

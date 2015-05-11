@@ -34,23 +34,20 @@ object RunRecommender {
     val rawUserArtistData = args.length match {
       //"hdfs:///user/ds/"
       case x: Int if x > 1 => sc.textFile(base + "user_artist_data.txt")
-      case _ => sc.parallelize(List("1000002 1 55",
-        "1000002 1000006 33"))
+      case _ => sc.textFile("./files/3/user_artist_data_1000.txt")
     }
       //sc.textFile(base + "user_artist_data.txt")
     val rawArtistData = args.length match {
         //"hdfs:///user/ds/"
         case x: Int if x > 1 => sc.textFile(base + "user_artist_data.txt")
-        case _ => sc.parallelize(List("1134999\t06Crazy Life",
-          "6821360\tPang Nakarin"))
+        case _ => sc.textFile("./files/3/artist_data_1000.txt")
       }
 
         //sc.textFile(base + "artist_data.txt")
     val rawArtistAlias = args.length match {
           //"hdfs:///user/ds/"
           case x: Int if x > 1 => sc.textFile(base + "user_artist_data.txt")
-          case _ => sc.parallelize(List("1092764\t1000311",
-            "1095122\t1000557"))
+          case _ => sc.textFile("./files/3/artist_alias_1000.txt")
         }
         //sc.textFile(base + "artist_alias.txt")
 
@@ -126,7 +123,9 @@ object RunRecommender {
 
     println(model.userFeatures.mapValues(_.mkString(", ")).first())
 
-    val userID = 2093760
+    //val userID = 2093760
+    val userID = model.userFeatures.take(1)(0)._1
+
     val recommendations = model.recommendProducts(userID, 5)
     recommendations.foreach(println)
     val recommendedProductIDs = recommendations.map(_.product).toSet
@@ -268,7 +267,9 @@ object RunRecommender {
     val model = ALS.trainImplicit(allData, 50, 10, 1.0, 40.0)
     allData.unpersist()
 
-    val userID = 2093760
+    //val userID = 2093760
+    val userID = model.userFeatures.take(1)(0)._1
+
     val recommendations = model.recommendProducts(userID, 5)
     val recommendedProductIDs = recommendations.map(_.product).toSet
 
